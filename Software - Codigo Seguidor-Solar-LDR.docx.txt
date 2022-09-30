@@ -1,0 +1,82 @@
+﻿#INCLUDE <16F887.h>
+#device adc=10
+#fuses XT,NOPROTECT,NOWDT,NOBROWNOUT,NOPUT,NOLVP,NODEBUG,NOBROWNOUT,NOCPD,NOWRT
+#use delay(clock=4000000)//Crystal Externo 4MHz
+#byte PORTB=6
+
+
+
+
+byte const HORARIO[4] = {  0b1100,
+                           0b0110,
+                           0b0011,
+                           0b1001};
+                           
+byte const ANTIH[4] ={     0b1001,
+                           0b0011,
+                           0b0110,
+                           0b1100};
+                           
+void main()
+{
+   INT CONT=0;
+   int retraso;
+   int error;
+   int16 sensor;                          // Valor de la conversión del ADC
+   float volt;
+   int16 mid=512;
+   
+   SETUP_ADC_PORTS(sAN0);                 //  Configuramos RA0 como pin Analógico
+   setup_adc(ADC_CLOCK_INTERNAL);
+   SET_ADC_CHANNEL(0);
+   
+   SET_TRIS_B(0B00000000);                //Configura el puerto B
+   
+   WHILE(TRUE)
+   {
+      delay_us(20);
+      sensor = READ_ADC();               //Convertimos el Valor Analogico
+      volt = (5.0/1023.0) *(sensor);
+      error= abs(sensor-512);
+      retraso= (300000/(error));
+      
+      
+      IF(sensor<(mid-12))       // Pregunta si la Lectura del sensor es menor que la referencia - Zona muerta
+      {
+         IF(CONT<4)                  //Mientras que cont sea menor a 4 
+         {
+            PORTB=(HORARIO[CONT]);        //Envíe al puerto B la información //de
+                                          //la tabla de horario
+            DELAY_MS(retraso);                //Retardo proporcional al error
+            CONT++;                   //Incremente la variable cont
+         }
+        
+ ELSE
+         {
+            CONT=0;                          // Reinicia la variable cont =0
+            PORTB=(HORARIO[CONT]);          //Envíe al puerto B la información de
+                                            //la tabla de antihorario
+            DELAY_MS(retraso);              //Retardo de Proporcional al error
+            CONT++;
+         }
+      }
+      ELSE IF(sensor>(mid+12))          //Si la lectura es mayor que la referencia + Zona muerta
+      {
+         IF((CONT<4))                     //Mientras que cont sea menor a 4 
+         {
+            PORTB=(ANTIH[CONT]);          //Envíe al puerto B la información de
+                                          //la tabla de antihorario
+            DELAY_MS(retraso);                //Retardo proporcional al error
+            CONT++;                       //Incremente la variable cont
+         }
+         ELSE
+         {
+            CONT=0;                          // Reinicia la variable cont =0
+            PORTB=(ANTIH[CONT]);          //Envíe al puerto B la información de
+                                          //la tabla de antihorario
+            DELAY_MS(retraso);                //Retardo proporcional al error
+            CONT++;
+         }
+      }
+   }
+}
